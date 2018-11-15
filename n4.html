@@ -25,6 +25,7 @@
 	
 	
 	<script src="js/jquery.min.js"></script>
+	<script src="js/math.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 	<!--<script type="text/javascript" src="http://maps.google.com/maps/api/js?key=AIzaSyDC79mAhKoODsuNmZPYNMNFomVVbb8l0Ls&sensor=false"></script>-->
 	<!--<script  src="http://maps.google.com/maps/api/js?key=AIzaSyBzMDSMPcKm03bAx6irSrBhZU3tq5UMG-g" type="text/javascript"></script>-->
@@ -105,6 +106,24 @@
 				<label class="btn btn-default btn-file" style="width:100%">
 					Input <input type="file" style="display: none;"  onchange="handleFiles(this.files)">
 				</label>
+				</li>
+				<li>
+					<div class="dropdown" style="float:left;width:100% " >
+						<button id = "LATDROPDOWN" class="btn btn-secondary dropdown-toggle" type="button"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="width:100%">
+							Lat
+						</button>
+						<div id = "LatDropDownContent" class="dropdown-menu" aria-labelledby="LATDROPDOWN">
+						</div>
+					</div>
+					<div class="dropdown" style="float:left ; width:100%" >
+						<button id = "LONDROPDOWN" class="btn btn-secondary dropdown-toggle" type="button"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="width:100%">
+							Lon
+						</button>
+						<div id = "LonDropDownContent" class="dropdown-menu" aria-labelledby="LONDROPDOWN">
+
+						</div>
+					</div>
+					<button id = "LoadCSVData2Map" onclick = "F_LoadCSVData2Map()" class="btn btn-default btn-file" style="float:left ;width:100%" type="button"> Create Layer </button>
 				</li>
 				<li class="list-group-item">
 				<button type="button" class="btn btn-primary"   onclick="DownloadCurrentMap()" style="width:100%">Download</button>
@@ -233,17 +252,8 @@
 
 	</div>
 	<div style="height: 150px">
-	<textarea id='editBar' " style="float:left"> 6666 </textarea>
-	<div>
-		<div class="dropdown" style="float:left" >
-		<button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="width:100%">
-					Map Style
-					</button>
-					<div id = "LatDropDownContent" class="dropdown-menu" aria-labelledby="dropdownMenu2">
+	  <!-- <textarea id='editBar' " style="float:left"> 6666 </textarea> -->
 
-					</div>
-		</div>
-	</div>
 	<table id='example' class="table table-striped table-bordered" style="width:100%">
 	
 	</table>
@@ -266,16 +276,22 @@ var Cluster = false;
 var Heatmap = false;
 var Normal =  true;
 var geocoder = new google.maps.Geocoder();
-var CircleSize = 10;
-var CircleColor = "#82D3A2";
+var CircleSize = 5;
+var CircleColor = "#00FFFF";
 var TextColor = "#828201";
 var TextSize = 12;
+var ThisLat = "2";
+var ThisLon = "1";
+
+var TitleCol;
+var allTextLines;
+
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiZ3ViYjY3MyIsImEiOiJjaXFqMDR4OWQwODRxZnJtMWhpaWtxbnBzIn0.JeBpEcWX8PvM4Mu9-rKqQA';
 var map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/basic-v9',
-    zoom: 13,
+    style: 'mapbox://styles/mapbox/dark-v9',
+    zoom: 10,
     center: [114.1095,22.3964],
 	preserveDrawingBuffer: true
 });
@@ -371,15 +387,11 @@ function GeoCodeText()
 	
 }
 
-
-
-
 function inim(){
   geocoder  = new google.maps.Geocoder();
 };
 
 var geoJsonData = {
-  
   type: "FeatureCollection",
   features: []
 };
@@ -469,7 +481,8 @@ var geojsondatafortest = {
 	return{
 		"circle-radius": CircleSize,
 		"circle-color": CircleColor,
-		"circle-opacity": 0.6,
+		"circle-opacity": 0.4,
+		//"circle-blur": 1
 		
 	};
 	}
@@ -571,8 +584,6 @@ var geojsondatafortest = {
 	   
 	 
 	}
-	
-	
     function getAsText(fileToRead) {
       var reader = new FileReader();
       // Read file into memory as UTF-8      
@@ -581,28 +592,42 @@ var geojsondatafortest = {
       reader.onload = loadHandler;
       reader.onerror = errorHandler;
     }
-
     function loadHandler(event) {
 		var csv = event.target.result;
-      processData(csv);
-	
+		processData(csv);
     }
 	function csvToArray (csv) {
 		rows = csv.split("\n");
-
-    return rows.map(function (row) {
+		return rows.map(function (row) {
 		return row.split(",");
     });
 	};
+	function ChangeLL(value,id){
+	  field_latlon = value.split("_");
+	  fieldname = id.split("_");
+	  if(field_latlon[1]=="Lat")
+	  {
+			ThisLat = field_latlon[0];
+			document.getElementById('LATDROPDOWN').innerHTML = fieldname[1]+"(Lat)";
+	
+	  }else{
+			ThisLon = field_latlon[0];
+			document.getElementById('LONDROPDOWN').innerHTML = fieldname[1]+"(Lon)";
+	  }
+	}
     function processData(csv) {
-		var allTextLines = csv.split(/\r\n|\n/);
+		allTextLines = csv.split(/\r\n|\n/);
 		var _csvArray = csvToArray(csv);
-		var TitleCol = _csvArray.shift();
+		TitleCol = _csvArray.shift();
 		var col = [];
+		//$('#LONDROPDOWN').dropdown('dispose')
+		$('#LatDropDownContent').empty();
+		$('#LonDropDownContent').empty();
 		for (var i =0; i<TitleCol.length;i++){
 		 col[i] = {};
 		 col[i].title = TitleCol[i];
-		 $('#LatDropDownContent').append("<button class=\"dropdown-item\" type=\"button\" value="+TitleCol[i]+" >"+TitleCol[i]+"</button>");
+		 $('#LatDropDownContent').append("<button class=\"dropdown-item\" type=\"button\" value="+i+"_Lat onclick=\"ChangeLL(value,id)\" id=\"Lat_"+TitleCol[i]+"_"+i+"\">"+TitleCol[i]+"</button>");
+		 $('#LonDropDownContent').append("<button class=\"dropdown-item\" type=\"button\" value="+i+"_Lon onclick=\"ChangeLL(value,id)\" id=\"Lon_"+TitleCol[i]+"_"+i+"\">"+TitleCol[i]+"</button>");
 		}
 		 
         $('#example').DataTable({
@@ -610,14 +635,34 @@ var geojsondatafortest = {
 		columns:col
 		});
 		 
-		$('LatDropDownContent').append();
-		 
-        var lines = [];
+		//$('LatDropDownContent').append();
+		
+       
+	  //omnivore.csv(lines).addTo(map);
+     
+	
+	 
+		
+    }
+    function errorHandler(evt) {
+      if(evt.target.error.name == "NotReadableError") {
+          alert("Canno't read file !");
+      }
+    }
+	function F_LoadCSVData2Map(){
+		var lines = [];
+		var xcenter = [];
+		var ycenter  = [];
+		var length =0;
+		var data;
         for (var i=1; i<allTextLines.length; i++) {
-            var data = allTextLines[i].split(',');
+            data = allTextLines[i].split(',');
             var tarr = [];
 			//json.dumps(geoJsonData);
-			geoJsonData.features.push({
+			if((!math.isNaN(Number(data[ThisLon])))&&(!math.isNaN(Number(data[ThisLon])))){
+				xcenter.push(Number(data[ThisLon]));
+				ycenter.push(Number(data[ThisLat]));
+			var features = {
                   type: 'Feature',
                   properties: {
 						"FeatureName":data[2],
@@ -625,24 +670,22 @@ var geojsondatafortest = {
                         },
                   geometry: {
 				  type: 'Point',
-				  coordinates: [Number(data[1]), Number(data[0])]
+				  coordinates: [Number(data[ThisLon]), Number(data[ThisLat])]
                   }
-				  
-            });
+            };
+			for (var j=0; j<TitleCol.length; j++){
+				features.properties[TitleCol[j]] = data[j];
+			};
+			geoJsonData.features.push(features)	
+			length ++;
+			}
+			
         }
-	  //omnivore.csv(lines).addTo(map);
-      console.log("a22");
-	
-	  addlayerswithvalue(geoJsonData);
-		
-    }
-
-    function errorHandler(evt) {
-      if(evt.target.error.name == "NotReadableError") {
-          alert("Canno't read file !");
-      }
-    }
-
+		console.log("added: "+length + "features")
+		addlayerswithvalue(geoJsonData);
+		map.flyTo({
+        center: [math.median(xcenter),math.median(ycenter)]});
+	}
 
 </script>
 </body>
